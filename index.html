@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f4efe4" />
+  <meta name="color-scheme" content="light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="解案驾驶舱" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>解案执行驾驶舱</title>
+</head>
+<body>
+  <div id="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">PERSONAL PRACTICE · EXECUTION</div>
+        <h1 id="page-title">解案执行驾驶舱</h1>
+      </div>
+      <button id="week-button" class="icon-button" type="button" aria-label="查看本周">本周</button>
+    </header>
+    <main id="app" tabindex="-1"></main>
+    <nav class="bottom-nav" aria-label="主导航">
+      <button data-route="today" class="nav-item"><span>今</span><b>今天</b></button>
+      <button data-route="fragments" class="nav-item"><span>碎</span><b>碎片</b></button>
+      <button data-route="core" class="nav-item"><span>1007</span><b>1007</b></button>
+      <button data-route="source" class="nav-item"><span>原</span><b>原文</b></button>
+      <button data-route="records" class="nav-item"><span>记</span><b>记录</b></button>
+    </nav>
+  </div>
+  <div id="sheet-root"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
