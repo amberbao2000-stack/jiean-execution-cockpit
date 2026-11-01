@@ -1,5 +1,5 @@
-const CACHE='jiean-cockpit-v1.1.0';
-const CORE=['./','./index.html','./styles.css','./app.js','./core.js','./content.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
+const CACHE='jiean-cockpit-v1.2.0';
+const CORE=['./','./index.html','./styles.css','./app.js','./core.js','./content.js','./supplements.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
