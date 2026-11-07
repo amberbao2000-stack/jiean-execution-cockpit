@@ -1,5 +1,20 @@
-import {SECTIONS,ORIGINAL_PARAGRAPHS,CORE_1007,TASKS,WEEKLY_QUOTA,REALITY_ITEMS,FRAGMENT_BUCKETS,PENDING_ITEMS} from './content.js';
+import {
+  SECTIONS as WORD_SECTIONS, ORIGINAL_PARAGRAPHS as WORD_PARAGRAPHS,
+  CORE_1007 as WORD_CORE, TASKS, WEEKLY_QUOTA,
+  REALITY_ITEMS as WORD_REALITY_ITEMS, FRAGMENT_BUCKETS, PENDING_ITEMS
+} from './content.js';
+import {
+  SUPPLEMENT_SECTIONS, SUPPLEMENT_PARAGRAPHS,
+  SUPPLEMENT_CORE_1007, SUPPLEMENT_REALITY_ITEMS
+} from './supplements.js?v=1.3';
 import {STATUS,dateKey,dateLabel,weekdayCN,isTaskDue,dueTasks,weekDays,weekKey,normalizeImportedData,weeklyQuotaCount,weeklyEventCount,formatTodayExport,formatWeekExport} from './core.js';
+
+// 明确组合两个来源，不依赖独立 script 的执行顺序或对模块数据的副作用修改。
+const SECTIONS = [...WORD_SECTIONS, ...SUPPLEMENT_SECTIONS];
+const ORIGINAL_PARAGRAPHS = [...WORD_PARAGRAPHS, ...SUPPLEMENT_PARAGRAPHS];
+const CORE_1007 = [...WORD_CORE, ...SUPPLEMENT_CORE_1007];
+const REALITY_ITEMS = [...WORD_REALITY_ITEMS, ...SUPPLEMENT_REALITY_ITEMS];
+const EXTRA_REALITY_THEMES = SUPPLEMENT_REALITY_ITEMS.filter(x => x.themeChoice).map(x => x.title);
 
 const app=document.querySelector('#app');
 const titleEl=document.querySelector('#page-title');
@@ -28,7 +43,7 @@ function routeInfo(){
 function go(route,params={}){ const qs=new URLSearchParams(params).toString(); location.hash=route+(qs?'?'+qs:''); }
 function navActive(route){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===route)); }
 function setTitle(t){ titleEl.textContent=t; }
-function sourceLabelForP(p){ const sec=SECTIONS.find(s=>s.start<=p&&p<=s.end); return sec ? `${sec.title}｜${sec.page}｜原文段落 P${p}` : `原文段落 P${p}`; }
+function sourceLabelForP(p){ const sec=SECTIONS.find(s=>s.start<=p&&p<=s.end); return sec ? `${sec.title}｜${sec.page}｜${p>=8000?'新增原话定位':'原文段落'} P${p}` : `段落 P${p}`; }
 function dueStatus(task,date){ return data.statuses?.[dateKey(date)]?.[task.id] || 'none'; }
 function setStatus(taskId,status,date=now()){
   const dk=dateKey(date); data.statuses[dk] ||= {}; if(data.statuses[dk][taskId]===status) delete data.statuses[dk][taskId]; else data.statuses[dk][taskId]=status; saveData(); render();
@@ -51,9 +66,21 @@ function renderFragments(){
   setTitle('碎片时间'); navActive('fragments');
   app.innerHTML=`<div class="section-kicker">NOW</div><div class="hero-date">🚇 碎片时间</div><p class="hero-sub">不是把所有训练切碎，而是先判断：此刻这个场景，原文允许怎么练。</p>${FRAGMENT_BUCKETS.map(b=>`<section class="bucket"><h2>${esc(b.bucket)}</h2><div class="card">${b.items.map(x=>`<div class="fragment-item"><b>${x.pending?'⚠️ ':''}${esc(x.title)}</b><p>${esc(x.note)}</p><div class="button-row">${x.taskId?`<button class="primary-btn mini-btn" data-action="start" data-task="${x.taskId}">开始</button>`:''}${x.action==='reality'?`<button class="primary-btn mini-btn" data-action="open-reality">记录现实调用</button>`:''}${x.action==='slogan-reality'?`<button class="primary-btn mini-btn" data-action="slogan-reality">记录一次</button>`:''}${Number.isInteger(x.sourceP)?`<button class="ghost-btn mini-btn" data-action="source" data-p="${x.sourceP}">查看原文</button>`:''}</div></div>`).join('')}</div></section>`).join('')}`;
 }
+function renderRecentDetails(c){
+  if (!c.facets?.length && !c.selfInsights?.length) return '';
+  const facets = (c.facets || []).map(f => `<details class="detail-subcard"><summary>${esc(f.title)}<span class="chev">⌄</span></summary><div class="subcard-body"><div class="tiny muted">什么时候用：${esc(f.when)}</div><div class="original-quote">${esc(f.quote)}</div><button class="ghost-btn mini-btn" data-action="source" data-p="${f.sourceP}">查看师父原话</button></div></details>`).join('');
+  const personal = (c.selfInsights || []).map(s => `<details class="detail-subcard self-subcard"><summary>${esc(s.title)}<span class="chev">⌄</span></summary><div class="subcard-body"><div class="original-quote">${esc(s.quote)}</div><button class="ghost-btn mini-btn" data-action="source" data-p="${s.sourceP}">查看我的原话摘录</button>${s.extraSourceP?`<button class="ghost-btn mini-btn" data-action="source" data-p="${s.extraSourceP}">查看另一段摘录</button>`:''}</div></details>`).join('');
+  const reminders = (c.reminders || []).map(r => `<div class="reminder-quote">「${esc(r.quote)}」 <button class="ghost-btn mini-btn" data-action="source" data-p="${r.sourceP}">原话</button></div>`).join('');
+  return `<div class="detail-collection"><h3>师父的三种现实调用</h3>${facets}<h3>11.05｜我对自己的认识 <span class="tiny muted">（当时的观察，不是永久标签）</span></h3>${personal}<div class="soft-note">${reminders}</div><p class="tiny muted">师父两次回复在原文层完整收录；我的认识仅保留经确认的原话摘录。</p></div>`;
+}
+function coreCardMarkup(c){
+  return `<details class="card core-card"><summary><div class="core-summary"><div><h2>${esc(c.title)}</h2><div class="core-one">${esc(c.core)}</div></div><span class="chev">⌄</span></div></summary><div class="when"><b>什么时候用</b><br>${esc(c.when)}</div>${renderRecentDetails(c)}<div class="details-actions button-row"><button class="primary-btn" data-action="open-reality" data-theme="${attr(c.title)}">现实调用</button><button class="ghost-btn" data-action="source" data-p="${c.sourceP}">进入完整原文</button></div><div class="source-line">来源：${esc(c.sourceLabel)}</div></details>`;
+}
 function renderCore(){
   setTitle('1007 核心'); navActive('core');
-  app.innerHTML=`<div class="section-kicker">1007 CORE</div><div class="hero-date">🧭 1007 核心</div><p class="hero-sub">默认只露出一句话核心；需要时再展开“什么时候用”，完整内容始终回到原文。</p>${CORE_1007.map(c=>`<details class="card core-card"><summary><div class="core-summary"><div><h2>${esc(c.title)}</h2><div class="core-one">${esc(c.core)}</div></div><span class="chev">⌄</span></div></summary><div class="when"><b>什么时候用</b><br>${esc(c.when)}</div><div class="details-actions button-row"><button class="primary-btn" data-action="open-reality" data-theme="${attr(c.title)}">现实调用</button><button class="ghost-btn" data-action="source" data-p="${c.sourceP}">进入完整原文</button></div><div class="source-line">来源：${esc(c.sourceLabel)}</div></details>`).join('')}`;
+  const recent = CORE_1007.filter(c => c.kind === 'recent');
+  const original = CORE_1007.filter(c => c.kind !== 'recent');
+  app.innerHTML = `<div class="section-kicker">1007 CORE & RECENT NOTES</div><div class="hero-date">🧭 1007 核心</div><p class="hero-sub">先选当下需要的主题；全文和来源始终可回查。近期新增不改变固定日程。</p><section aria-label="近期补充"><div class="section-split"><h2 class="section-title">近期补充</h2><span class="version-pill">${recent.length} 个主题 · v1.3</span></div><p class="muted tiny">新增对话原话，不属于原 1007 Word。11.05 保留师父完整回复，我的认识只精选摘录。</p>${recent.map(coreCardMarkup).join('')}</section><section aria-label="1007 原有核心"><h2 class="section-title">1007 原有核心</h2>${original.map(coreCardMarkup).join('')}</section>`;
 }
 function detectSubheading(text){ return /^(第一部分|第二部分|第三部分|[abcd](?:\s|[一二三四五六七八九十])|[0-9]+[\.、）)]|第[一二三四五六七八九十]+[，、.]|关于|当务之急|===|解案要点|运动继续|我要时不时念叨)/.test(text.trim()); }
 function groupParagraphs(ps){
@@ -66,10 +93,18 @@ function groupParagraphs(ps){
 }
 function sourceSearch(q){
   const term=q.trim(); if(!term) return [];
-  const coreHits=CORE_1007.filter(c=>(c.title+c.core+c.when).includes(term)).map(c=>({type:'theme',title:c.title,text:c.core,p:c.sourceP}));
-  const taskHits=TASKS.filter(t=>(t.title+t.subtitle+t.method.join('')).includes(term)).map(t=>({type:'task',title:t.title,text:t.method[0]||'',p:t.sourceP}));
-  const paraHits=ORIGINAL_PARAGRAPHS.filter(p=>p.text.includes(term)).slice(0,24).map(p=>({type:'原文',title:SECTIONS.find(s=>s.id===p.section)?.title||'原文',text:p.text,p:p.p}));
+  const coreHits=CORE_1007.filter(c=>(c.title+c.core+c.when+(c.facets||[]).map(f=>f.title+f.quote).join('')+(c.selfInsights||[]).map(x=>x.title+x.quote).join('')).includes(term)).map(c=>({type:'主题',title:c.title,text:c.core,p:c.sourceP}));
+  const taskHits=TASKS.filter(t=>(t.title+t.subtitle+t.method.join('')).includes(term)).map(t=>({type:'训练',title:t.title,text:t.method[0]||'',p:t.sourceP}));
+  const asHits=ps=>ps.filter(p=>p.text.includes(term)).map(p=>({type:p.p>=8000?'新增原话':'Word 原文',title:SECTIONS.find(s=>s.id===p.section)?.title||'原文',text:p.text,p:p.p}));
+  // 新增原话总排在 Word 海量匹配之前，不会被原先前 24 条结果截掉。
+  const paraHits=[...asHits(SUPPLEMENT_PARAGRAPHS),...asHits(WORD_PARAGRAPHS).slice(0,40)];
   const seen=new Set(); return [...coreHits,...taskHits,...paraHits].filter(x=>{const k=x.type+'|'+x.p+'|'+x.title;if(seen.has(k))return false;seen.add(k);return true;});
+}
+function searchExcerpt(text,term){
+  const at=text.indexOf(term);
+  if(at<0) return text.length>155?text.slice(0,155)+'…':text;
+  const start=Math.max(0,at-46),end=Math.min(text.length,at+115);
+  return (start?'…':'')+text.slice(start,end)+(end<text.length?'…':'');
 }
 function hi(text,q){ if(!q) return esc(text); const safe=esc(text); const re=new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'); return safe.replace(re,m=>`<mark>${m}</mark>`); }
 function renderSource(params=new URLSearchParams()){
@@ -79,13 +114,13 @@ function renderSource(params=new URLSearchParams()){
     return;
   }
   const ps=ORIGINAL_PARAGRAPHS.filter(p=>p.section===sec.id); const groups=groupParagraphs(ps);
-  app.innerHTML=`<div class="reader-head"><div><div class="section-kicker">ORIGINAL</div><h2 class="reader-section-title">${esc(sec.title)}</h2><div class="tiny muted">${esc(sec.page)} · 原文段落 P${sec.start}–P${sec.end}</div></div><button class="icon-button" data-action="source-home">目录</button></div><div class="search-wrap"><input id="source-search" class="search-input" type="search" placeholder="在完整原文中搜索" autocomplete="off" /></div><div id="search-results"></div><div id="reader-body">${groups.map((g,idx)=>`<details class="source-group" ${idx<2?'open':''}><summary>${esc(g.title)} <span class="tiny muted">(${g.items.length})</span></summary><div class="source-group-body">${g.items.map(p=>`<p id="src-p${p.p}" class="original-p ${p.p===pNum?'highlight':''}"><span class="para-num">P${p.p}</span>${esc(p.text)}</p>`).join('')}</div></details>`).join('')}</div><div class="button-row"><button class="ghost-btn" data-action="top">回到顶部</button><button class="secondary-btn" data-action="source-home">章节目录</button></div>`;
+  app.innerHTML=`<div class="reader-head"><div><div class="section-kicker">${sec.start>=8000?"NEW QUOTES":"ORIGINAL WORD"}</div><h2 class="reader-section-title">${esc(sec.title)}</h2><div class="tiny muted">${esc(sec.page)} · 原文段落 P${sec.start}–P${sec.end}</div></div><button class="icon-button" data-action="source-home">目录</button></div><div class="search-wrap"><input id="source-search" class="search-input" type="search" placeholder="在完整原文中搜索" autocomplete="off" /></div><div id="search-results"></div>${sec.start>=8000?`<div class="quiet-note">近期新增对话内容，非 1007 Word 原文。个人认识页仅包含精选原话摘录。</div>`:""}<div id="reader-body">${groups.map((g,idx)=>`<details class="source-group" ${idx<2?'open':''}><summary>${esc(g.title)} <span class="tiny muted">(${g.items.length})</span></summary><div class="source-group-body">${g.items.map(p=>`<p id="src-p${p.p}" class="original-p ${p.p===pNum?'highlight':''}"><span class="para-num">P${p.p}</span>${esc(p.text)}</p>`).join('')}</div></details>`).join('')}</div><div class="button-row"><button class="ghost-btn" data-action="top">回到顶部</button><button class="secondary-btn" data-action="source-home">章节目录</button></div>`;
   if(Number.isFinite(pNum)) setTimeout(()=>{const el=document.querySelector(`#src-p${pNum}`); if(el){ let d=el.closest('details'); if(d)d.open=true; el.scrollIntoView({block:'center'});}},30);
 }
-function searchResultsMarkup(q){ const hits=sourceSearch(q); if(!q.trim()) return ''; if(!hits.length) return `<div class="card compact muted">没有找到“${esc(q)}”。</div>`; return `<div class="card">${hits.map(h=>`<div class="search-result"><div class="tiny muted">${esc(h.type)} · ${esc(sourceLabelForP(h.p))}</div><b>${hi(h.title,q)}</b><div class="tiny" style="margin:5px 0">${hi(h.text.length>150?h.text.slice(0,150)+'…':h.text,q)}</div><button class="ghost-btn mini-btn" data-action="source" data-p="${h.p}">跳到原文</button></div>`).join('')}</div>`; }
+function searchResultsMarkup(q){ const hits=sourceSearch(q); if(!q.trim()) return ''; if(!hits.length) return `<div class="card compact muted">没有找到“${esc(q)}”。</div>`; return `<div class="card">${hits.map(h=>`<div class="search-result"><div class="tiny muted">${esc(h.type)} · ${esc(sourceLabelForP(h.p))}</div><b>${hi(h.title,q)}</b><div class="tiny" style="margin:5px 0">${hi(searchExcerpt(h.text,q),q)}</div><button class="ghost-btn mini-btn" data-action="source" data-p="${h.p}">跳到原文</button></div>`).join('')}</div>`; }
 function renderRecords(){
   setTitle('记录'); navActive('records'); const d=now(); const dk=dateKey(d); const todays=data.realityCalls.filter(x=>x.date===dk).slice().reverse(); const todayWeekly=(data.weeklyEvents||[]).filter(x=>x.date===dk).slice().reverse();
-  app.innerHTML=`<div class="section-kicker">LOG</div><div class="hero-date">记录</div><p class="hero-sub">只保留执行状态、简短现实调用和可迁移数据；不再建立第二套知识库。</p><article class="card"><h2>⭐ 现实调用</h2><form id="reality-form"><input type="hidden" name="kind" value="reality"/><div class="form-field"><label>场景</label><textarea name="scene" required placeholder="例如：补 IB 课程"></textarea></div><div class="form-field"><label>我想起了</label><select name="theme"><option value="">选择解案主题</option>${CORE_1007.map(c=>`<option>${esc(c.title)}</option>`).join('')}<option>日口号</option></select></div><div class="form-field"><label>我实际怎么做了</label><textarea name="action" required placeholder="一句或两句即可"></textarea></div><div class="form-field"><label>结果 / 反馈</label><textarea name="result" placeholder="可留空"></textarea></div><button class="primary-btn" type="submit" style="width:100%">保存现实调用</button></form></article><article class="card"><h2>复制记录</h2><div class="data-actions"><button class="secondary-btn" data-action="copy-today">复制今日记录</button><button class="secondary-btn" data-action="copy-week">复制本周记录</button></div></article><article class="card"><h2>备份 / 恢复</h2><p class="muted tiny">状态、现实调用和周累计记录保存在浏览器本地。换设备前可导出 JSON；新设备再导入。</p><div class="data-actions"><button class="ghost-btn" data-action="export-json">导出全部记录 JSON</button><label class="file-label">导入记录 JSON<input id="import-json" type="file" accept="application/json,.json"/></label></div></article><h2 class="section-title">今天的现实调用</h2>${todays.length?`<div class="card">${todays.map(c=>recordMarkup(c)).join('')}</div>`:`<div class="empty">今天还没有现实调用记录。</div>`}<h2 class="section-title">今天的周累计记录</h2>${todayWeekly.length?`<div class="card">${todayWeekly.map(e=>weeklyEventMarkup(e)).join('')}</div>`:`<div class="empty">今天还没有周累计记录。</div>`}`;
+  app.innerHTML=`<div class="section-kicker">LOG</div><div class="hero-date">记录</div><p class="hero-sub">只保留执行状态、简短现实调用和可迁移数据；不再建立第二套知识库。</p><article class="card"><h2>⭐ 现实调用</h2><form id="reality-form"><input type="hidden" name="kind" value="reality"/><div class="form-field"><label>场景</label><textarea name="scene" required placeholder="例如：补 IB 课程"></textarea></div><div class="form-field"><label>我想起了</label><select name="theme"><option value="">选择解案主题</option>${CORE_1007.map(c=>`<option>${esc(c.title)}</option>`).join('')}${EXTRA_REALITY_THEMES.map(t=>`<option>${esc(t)}</option>`).join('')}<option>日口号</option></select></div><div class="form-field"><label>我实际怎么做了</label><textarea name="action" required placeholder="一句或两句即可"></textarea></div><div class="form-field"><label>结果 / 反馈</label><textarea name="result" placeholder="可留空"></textarea></div><button class="primary-btn" type="submit" style="width:100%">保存现实调用</button></form></article><article class="card"><h2>复制记录</h2><div class="data-actions"><button class="secondary-btn" data-action="copy-today">复制今日记录</button><button class="secondary-btn" data-action="copy-week">复制本周记录</button></div></article><article class="card"><h2>备份 / 恢复</h2><p class="muted tiny">状态、现实调用和周累计记录保存在浏览器本地。换设备前可导出 JSON；新设备再导入。</p><div class="data-actions"><button class="ghost-btn" data-action="export-json">导出全部记录 JSON</button><label class="file-label">导入记录 JSON<input id="import-json" type="file" accept="application/json,.json"/></label></div></article><h2 class="section-title">今天的现实调用</h2>${todays.length?`<div class="card">${todays.map(c=>recordMarkup(c)).join('')}</div>`:`<div class="empty">今天还没有现实调用记录。</div>`}<h2 class="section-title">今天的周累计记录</h2>${todayWeekly.length?`<div class="card">${todayWeekly.map(e=>weeklyEventMarkup(e)).join('')}</div>`:`<div class="empty">今天还没有周累计记录。</div>`}`;
 }
 function recordMarkup(c){ return `<div class="record"><time>${esc(c.date)} · ⭐ 现实调用</time><p><b>场景：</b>${esc(c.scene||'')}</p><p><b>调用：</b>${esc(c.theme||'')}</p><p><b>行动：</b>${esc(c.action||'')}</p>${c.result?`<p><b>结果：</b>${esc(c.result)}</p>`:''}<button class="ghost-btn mini-btn danger-btn" data-action="delete-call" data-id="${attr(c.id)}">删除这条</button></div>`; }
 function weeklyEventMarkup(e){ return `<div class="record"><time>${esc(e.date)} · 本周累计</time><p><b>${esc(e.title||e.kind)}：</b>+1</p><button class="ghost-btn mini-btn danger-btn" data-action="delete-weekly-event" data-id="${attr(e.id)}">删除这条</button></div>`; }
@@ -104,7 +139,7 @@ function openMethod(task,startMode=false){
 function openReading(task){ closeSheet(); const p=task.readingRange?.[0]??task.sourceP; go('source',{p:String(p)}); }
 function openReality(prefill={}){
   const theme=prefill.theme||''; const kind=prefill.kind||'reality'; closeSheet();
-  sheetRoot.innerHTML=`<div class="sheet-backdrop" data-action="close-sheet"><section class="sheet" role="dialog" aria-modal="true" aria-label="现实调用"><div class="sheet-handle"></div><h2>⭐ 现实调用</h2><form id="reality-sheet-form"><input type="hidden" name="kind" value="${attr(kind)}"/><div class="form-field"><label>场景</label><textarea name="scene" required></textarea></div><div class="form-field"><label>我想起了</label><select name="theme"><option value="">选择解案主题</option>${CORE_1007.map(c=>`<option ${c.title===theme?'selected':''}>${esc(c.title)}</option>`).join('')}<option ${theme==='日口号'?'selected':''}>日口号</option></select></div><div class="form-field"><label>我实际怎么做了</label><textarea name="action" required></textarea></div><div class="form-field"><label>结果 / 反馈</label><textarea name="result"></textarea></div><button class="primary-btn" type="submit" style="width:100%">保存</button></form><button class="ghost-btn sheet-close" data-action="close-sheet">关闭</button></section></div>`;
+  sheetRoot.innerHTML=`<div class="sheet-backdrop" data-action="close-sheet"><section class="sheet" role="dialog" aria-modal="true" aria-label="现实调用"><div class="sheet-handle"></div><h2>⭐ 现实调用</h2><form id="reality-sheet-form"><input type="hidden" name="kind" value="${attr(kind)}"/><div class="form-field"><label>场景</label><textarea name="scene" required></textarea></div><div class="form-field"><label>我想起了</label><select name="theme"><option value="">选择解案主题</option>${CORE_1007.map(c=>`<option ${c.title===theme?'selected':''}>${esc(c.title)}</option>`).join('')}${EXTRA_REALITY_THEMES.map(t=>`<option ${t===theme?'selected':''}>${esc(t)}</option>`).join('')}<option ${theme==='日口号'?'selected':''}>日口号</option></select></div><div class="form-field"><label>我实际怎么做了</label><textarea name="action" required></textarea></div><div class="form-field"><label>结果 / 反馈</label><textarea name="result"></textarea></div><button class="primary-btn" type="submit" style="width:100%">保存</button></form><button class="ghost-btn sheet-close" data-action="close-sheet">关闭</button></section></div>`;
 }
 function closeSheet(){ clearTimer(); sheetRoot.innerHTML=''; }
 function saveReality(form){

@@ -26,3 +26,20 @@ main{padding:18px}.hero-date{margin:2px 0 4px;font-family:Georgia,"Songti SC",se
 .muted{color:var(--muted)}.tiny{font-size:12px}.spacer{height:6px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (min-width:620px){main{padding:22px 28px}.quick-grid{grid-template-columns:repeat(4,1fr)}.data-actions{grid-template-columns:1fr 1fr}.topbar{padding-left:28px;padding-right:28px}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* v1.3 近期补充：平静的折叠层级，不引入新的每日管理压力。 */
+.section-split{display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-top:4px}
+.section-split .section-title{margin:16px 0 2px}
+.version-pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 9px;color:var(--muted);white-space:nowrap}
+.detail-collection{padding-top:12px}
+.detail-collection>h3{font-size:15px;margin:17px 0 8px}
+.detail-subcard{border:1px solid var(--line);background:#fbf8f1;border-radius:12px;margin:7px 0}
+.detail-subcard>summary{list-style:none;cursor:pointer;min-height:46px;padding:12px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
+.detail-subcard>summary::-webkit-details-marker{display:none}
+.detail-subcard .subcard-body{border-top:1px solid var(--line);padding:12px}
+.original-quote{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0;border-left:2px solid #b9aa91;padding-left:11px}
+.self-subcard{background:#f7f3e9}
+.soft-note{background:#f5f0e7;border-radius:12px;padding:5px 12px;margin-top:16px}
+.reminder-quote{font-size:13px;color:#5f665f;padding:11px 0;border-bottom:1px solid var(--line);line-height:1.7}
+.reminder-quote:last-child{border:0}
+.reminder-quote button{margin-left:5px}
